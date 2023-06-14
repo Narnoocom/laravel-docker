@@ -1,0 +1,179 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use Illuminate\Http\Request;
+use App\Models\LeaveManagerModel;
+use App\Http\Resources\LeaveManagerResource;
+use DateTime;
+use DateInterval;
+use DatePeriod;
+use Exception;
+
+class LeaveManagerController extends Controller
+{
+    public function getAllLeave(){
+        $query = []; 
+
+        try {
+
+            $leaveManagers = LeaveManagerModel::join('leave_type_manager', 'leave_manager.leave_type_manager_id', '=', 'leave_type_manager.id')
+            ->join('staff_member', 'leave_manager.staff_member_id', '=', 'staff_member.id')
+            ->select('leave_manager.created_at','leave_manager.start_date','leave_manager.end_date','leave_manager.leave_days','leave_manager.reason','leave_manager.updated_at','staff_member.id as staff_member_id','staff_member.first_name','staff_member.last_name','leave_type_manager.label as type')
+            ->paginate(25);
+
+            return new LeaveManagerResource($leaveManagers);
+            
+
+        } catch (\Illuminate\Database\QueryException $ex) {
+            
+            $query['success'] = (boolean) false;
+            $query['error'] = (string) $ex->getMessage();
+            
+            return response()->json($query);
+        }
+        
+        
+    }
+
+    //Store the leave request
+    public function store( Request $request ){
+
+        $query = [];
+
+        try {
+
+            $leave = new LeaveManagerModel;
+                
+            $leave->start_date = $request->startDate;
+            $leave->end_date   = $request->endDate;
+            $leave->reason = trim($request->reason);
+            $leave->staff_member_id = $request->staffMemberId;
+            $leave->leave_type_manager_id = $request->leaveTypeManagerId;
+            $leave->leave_days = $this->dayCount($request->startDate,$request->endDate);
+
+            $leave->save();
+
+            $query['success'] = (boolean) true;
+            $query['data'] = (string) 'Leave successfully stored';
+
+            return response()->json($query);
+
+        } catch (\Illuminate\Database\QueryException $ex) {
+                
+            $query['success'] = (boolean) false;
+            $query['error'] = (string) $ex->getMessage();
+            
+            return response()->json($query);
+        }
+
+    }
+
+    public function calculateLeave( $startDate, $endDate ){
+
+        try {
+            
+            $query = [];
+
+            if( empty($startDate) || empty($endDate) ){
+                throw new Exception("Please provide a start date and an end date");
+            }
+            
+            $calculate = $this->dayCount($startDate,$endDate);
+
+            $query['success'] = (boolean) true;
+            $query['data'] = (int) $calculate;
+            
+            return response()->json($query);
+
+        
+        } catch (\Exception $e) {
+
+            $error = [];
+            $error['success'] = (boolean) false;
+            $error['error'] = $e->getMessage();
+            return response()->json($error);
+        }
+
+        return response()->json($segment);
+    }
+
+
+    /**
+     * Search the leave table
+     * Date
+     * Date Range
+     * Staff member
+     */
+    public function search( Request $request ){
+
+        try {
+            
+            $leaveManagers = LeaveManagerModel::join('leave_type_manager', 'leave_manager.leave_type_manager_id', '=', 'leave_type_manager.id')
+            ->join('staff_member', 'leave_manager.staff_member_id', '=', 'staff_member.id')
+            ->select('leave_manager.created_at','leave_manager.start_date','leave_manager.end_date','leave_manager.leave_days','leave_manager.reason','leave_manager.updated_at','staff_member.id as staff_member_id','staff_member.first_name','staff_member.last_name','leave_type_manager.label as type');
+            
+            if ( $request->filled('staffMemberId') ) {
+                $leaveManagers = $leaveManagers->where('staff_member.id',$request->input('staffMemberId'));
+                $params['staffMemberId'] = $request->input('staffMemberId');
+            }
+
+            if ( $request->filled('startDate') ) {
+                $leaveManagers = $leaveManagers->where('leave_manager.start_date',$request->input('startDate'));
+                $params['startDate'] = $request->input('startDate');
+            }
+            
+            $result = $leaveManagers->paginate(25);
+            /*$params = [];
+            if ($request->filled('startDate')) {
+                $params['startDate'] = $request->input('startDate');
+            }
+            if ($request->filled('endDate')) {
+                $params['endDate'] = $request->input('endDate');
+            }*/
+            
+
+
+
+            return response()->json($result);
+
+        } catch (\Exception $e) {
+            
+            $error = [];
+            $error['success'] = (boolean) false;
+            $error['error'] = $e->getMessage();
+            return response()->json($error);
+
+        }
+
+    }
+
+
+
+
+
+    //Determine if there are any weekends and remove these from the count
+    private function dayCount($start,$end){
+
+        $period = new DatePeriod(
+            new DateTime($start),
+            new DateInterval('P1D'),
+            new DateTime($end)
+        );
+
+        //Total number of days
+        $totalCount = iterator_count($period);
+
+        //Calculate the number of weekend days and exclude these
+        $weekendCount = 0;
+        foreach ($period as $key => $value) {
+            if ($value->format('N') >= 6) {
+                $weekendCount++;
+            }  
+        }
+
+        //Return the total count of days off minus weekends
+        return $totalCount - $weekendCount;
+
+    }
+}
