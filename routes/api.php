@@ -9,6 +9,7 @@ use App\Http\Controllers\LeaveManagerController;
 
 use App\Http\Middleware\Authentication;
 use App\Http\Middleware\ValidateLeaveInput;
+use App\Http\Middleware\ValidateLeaveInputUpdate;
 
 /*
 |--------------------------------------------------------------------------
@@ -24,14 +25,13 @@ use App\Http\Middleware\ValidateLeaveInput;
 
 Route::get( 'v1/employees',[StaffController::class, 'getAllStaff'])->middleware([Authentication::class]);
 Route::get( 'v1/leave-types',[LeaveTypeManagerController::class, 'getLeaveTypes'])->middleware([Authentication::class]);
-Route::get( 'v1/leave',[LeaveManagerController::class, 'getAllLeave'])->middleware([Authentication::class]);
 Route::get('v1/calculate/{startDate}/{endDate}',[LeaveManagerController::class, 'calculateLeave'])->middleware([Authentication::class]);
 
 Route::get('v1/search',[LeaveManagerController::class, 'search'])->middleware([Authentication::class]);
 
-
+Route::get( 'v1/leave',[LeaveManagerController::class, 'getAllLeave'])->middleware([Authentication::class]);
 Route::post( 'v1/leave',[LeaveManagerController::class, 'store'])->middleware([Authentication::class,ValidateLeaveInput::class]);
-
+Route::put( 'v1/leave',[LeaveManagerController::class, 'update'])->middleware([Authentication::class,ValidateLeaveInputUpdate::class]);
 /**
  * put v1/leave
  * get v1/leave

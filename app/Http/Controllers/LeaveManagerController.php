@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\LeaveManagerModel;
 use App\Http\Resources\LeaveManagerResource;
+use App\Models\LeaveTypeManager;
 use DateTime;
 use DateInterval;
 use DatePeriod;
@@ -19,7 +20,7 @@ class LeaveManagerController extends Controller
 
             $leaveManagers = LeaveManagerModel::join('leave_type_manager', 'leave_manager.leave_type_manager_id', '=', 'leave_type_manager.id')
             ->join('staff_member', 'leave_manager.staff_member_id', '=', 'staff_member.id')
-            ->select('leave_manager.created_at','leave_manager.start_date','leave_manager.end_date','leave_manager.leave_days','leave_manager.reason','leave_manager.updated_at','staff_member.id as staff_member_id','staff_member.first_name','staff_member.last_name','leave_type_manager.label as type')
+            ->select('leave_manager.id as leave_manager_id','leave_manager.created_at','leave_manager.start_date','leave_manager.end_date','leave_manager.leave_days','leave_manager.reason','leave_manager.updated_at','staff_member.id as staff_member_id','staff_member.first_name','staff_member.last_name','leave_type_manager.label as type','leave_type_manager.id as type_manager_id')
             ->paginate(25);
 
             return new LeaveManagerResource($leaveManagers);
@@ -45,12 +46,50 @@ class LeaveManagerController extends Controller
 
             $leave = new LeaveManagerModel;
                 
-            $leave->start_date = $request->startDate;
-            $leave->end_date   = $request->endDate;
+            $leave->start_date = date('Y-m-d',strtotime( $request->startDate ) );
+            $leave->end_date   = date('Y-m-d',strtotime( $request->endDate ) );
             $leave->reason = trim($request->reason);
-            $leave->staff_member_id = $request->staffMemberId;
             $leave->leave_type_manager_id = $request->leaveTypeManagerId;
             $leave->leave_days = $this->dayCount($request->startDate,$request->endDate);
+
+            $leave->save();
+
+
+            $query['success'] = (boolean) true;
+            $query['data'] = (string) 'Leave successfully stored';
+
+            return response()->json($query);
+
+        } catch (\Illuminate\Database\QueryException $ex) {
+                
+            $query['success'] = (boolean) false;
+            $query['error'] = (string) $ex->getMessage();
+            
+            return response()->json($query);
+        }
+
+    }
+
+    //Store the leave request
+    public function update( Request $request ){
+
+        $query = [];
+
+        try {
+
+            $leave = new LeaveManagerModel;
+                
+            $leave = LeaveManagerModel::find($request->leaveManagerId);
+            
+            ( !empty($request->startDate) ) ? $leave->start_date = date('Y-m-d',strtotime( $request->startDate ) ) : null;
+            ( !empty($request->endDate)) ? $leave->end_date = date('Y-m-d',strtotime( $request->endDate ) ) : null;
+            ( !empty($request->reason)) ? $leave->reason = trim($request->reason) : null;
+            ( !empty($request->reasonType)) ?  $leave->leave_type_manager_id = $request->reasonType : null;
+            
+            if(!empty($request->startDate) && !empty($request->endDate)){
+                $leave->leave_days = $this->dayCount($request->startDate,$request->endDate);
+            }
+            
 
             $leave->save();
 
@@ -95,7 +134,6 @@ class LeaveManagerController extends Controller
             return response()->json($error);
         }
 
-        return response()->json($segment);
     }
 
 
