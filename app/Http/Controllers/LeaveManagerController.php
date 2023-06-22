@@ -46,6 +46,7 @@ class LeaveManagerController extends Controller
 
             $leave = new LeaveManagerModel;
                 
+            $leave->staff_member_id = $request->staffMemberId;
             $leave->start_date = date('Y-m-d',strtotime( $request->startDate ) );
             $leave->end_date   = date('Y-m-d',strtotime( $request->endDate ) );
             $leave->reason = trim($request->reason);
