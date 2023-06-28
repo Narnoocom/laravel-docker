@@ -10,12 +10,12 @@ class StaffController extends Controller
 {
     //return a list of the staff members
 
-    public function getAllStaff(){
+    public function getAllStaff(Request $request){
         $query = []; 
 
         try {
             //Get all our staff members
-            $staff = StaffMember::paginate();
+            $staff = StaffMember::all();
 
             return new EmployeesResource($staff);
 

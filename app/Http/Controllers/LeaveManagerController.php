@@ -16,11 +16,17 @@ class LeaveManagerController extends Controller
     /**
      * Return a list of all the leave items
      * 
-     * @todo proper pagination of the results
-     * 
+     * @comment: I am just leaving the pagination at the full amount for load testing. Coming from my docker container on my laptop is slow regardless of database volumes.
+     * Ideally the datatable in the react app would be paging the results here.
+     * - https://react-data-table-component.netlify.app/?path=/docs/pagination-remote--remote
      */
-    public function getAllLeave(){
-        $query = []; 
+    public function getAllLeave( Request $request ){
+        $query = [];
+        
+        $perPage = $request->input('per_page', 10);
+        if (!is_numeric($perPage)) {
+            $perPage = 10;
+        } 
 
         try {
 
@@ -30,6 +36,7 @@ class LeaveManagerController extends Controller
             ->orderBy('created_at', 'desc')
             ->orderBy('updated_at', 'desc')
             ->paginate(10000);
+            //->paginate($perPage); - commentted out for load testing all results into the datatable
 
             return new LeaveManagerResource($leaveManagers);
             
