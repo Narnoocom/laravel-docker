@@ -125,7 +125,7 @@ class ValidateLeaveInput
         $startDate = date( 'Y-m-d', strtotime($start) );
         $endDate = date( 'Y-m-d', strtotime($end) );
 
-        if($endDate <= $startDate){
+        if($endDate < $startDate){
             return false;
         }else{
             return true;

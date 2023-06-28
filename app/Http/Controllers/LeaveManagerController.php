@@ -13,6 +13,12 @@ use Exception;
 
 class LeaveManagerController extends Controller
 {
+    /**
+     * Return a list of all the leave items
+     * 
+     * @todo proper pagination of the results
+     * 
+     */
     public function getAllLeave(){
         $query = []; 
 
@@ -21,7 +27,9 @@ class LeaveManagerController extends Controller
             $leaveManagers = LeaveManagerModel::join('leave_type_manager', 'leave_manager.leave_type_manager_id', '=', 'leave_type_manager.id')
             ->join('staff_member', 'leave_manager.staff_member_id', '=', 'staff_member.id')
             ->select('leave_manager.id as leave_manager_id','leave_manager.created_at','leave_manager.start_date','leave_manager.end_date','leave_manager.leave_days','leave_manager.reason','leave_manager.updated_at','staff_member.id as staff_member_id','staff_member.first_name','staff_member.last_name','leave_type_manager.label as type','leave_type_manager.id as type_manager_id')
-            ->paginate(25);
+            ->orderBy('created_at', 'desc')
+            ->orderBy('updated_at', 'desc')
+            ->paginate(10000);
 
             return new LeaveManagerResource($leaveManagers);
             
@@ -37,7 +45,9 @@ class LeaveManagerController extends Controller
         
     }
 
-    //Store the leave request
+    /**
+     * Store the leave request
+     */
     public function store( Request $request ){
 
         $query = [];
@@ -71,7 +81,9 @@ class LeaveManagerController extends Controller
 
     }
 
-    //Store the leave request
+    /**
+     * Update the leave request
+     */
     public function update( Request $request ){
 
         $query = [];
@@ -109,6 +121,9 @@ class LeaveManagerController extends Controller
 
     }
 
+    /**
+     * Calculate the leave amount for the request
+     */
     public function calculateLeave( $startDate, $endDate ){
 
         try {
@@ -163,17 +178,7 @@ class LeaveManagerController extends Controller
             }
             
             $result = $leaveManagers->paginate(25);
-            /*$params = [];
-            if ($request->filled('startDate')) {
-                $params['startDate'] = $request->input('startDate');
-            }
-            if ($request->filled('endDate')) {
-                $params['endDate'] = $request->input('endDate');
-            }*/
             
-
-
-
             return response()->json($result);
 
         } catch (\Exception $e) {
@@ -188,9 +193,6 @@ class LeaveManagerController extends Controller
     }
 
 
-
-
-
     //Determine if there are any weekends and remove these from the count
     private function dayCount($start,$end){
 
@@ -199,10 +201,10 @@ class LeaveManagerController extends Controller
             new DateInterval('P1D'),
             new DateTime($end)
         );
-
-        //Total number of days
-        $totalCount = iterator_count($period);
-
+        
+        //Total number of days inclusive of the first day
+        $totalCount = iterator_count($period)+1;
+        
         //Calculate the number of weekend days and exclude these
         $weekendCount = 0;
         foreach ($period as $key => $value) {
